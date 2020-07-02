@@ -38,6 +38,8 @@ class GRUPolicyGoalConSimpleFlexEnt(object):
             logger.info(f'input.shape {nn_input.shape}')
             h = tf.nn.relu(po.conv(tf.cast(nn_input, tf.float32)/255., 'c1', noutchannels=64, filtsize=8, stride=4))
             logger.info(f'h.shape: {h.shape}')
+            print('DOIN IT')
+            print(ob_shape, 'ob_shape')
             h2 = tf.nn.relu(po.conv(h, 'c2', noutchannels=128, filtsize=4, stride=2))
             logger.info(f'h2.shape: {h2.shape}')
             h3 = tf.nn.relu(po.conv(h2, 'c3', noutchannels=128, filtsize=3, stride=1))

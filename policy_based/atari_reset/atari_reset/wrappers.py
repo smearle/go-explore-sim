@@ -560,7 +560,8 @@ class MaxAndSkipEnv(MyWrapper):
             obs, reward, done, info = self.env.step(action)
             self._obs_buffer.append(obs)
             total_reward += reward
-            combined_info['skip_env.executed_actions'].append(info['sticky_env.executed_action'])
+            if 'sticky_env.executed_action' in info:
+                combined_info['skip_env.executed_actions'].append(info['sticky_env.executed_action'])
             combined_info.update(info)
             if done:
                 break
@@ -929,7 +930,8 @@ def my_wrapper(env,
     env = MaxAndSkipEnv(env, skip=skip)
     if 'Pong' in env.spec.id:
         env = FireResetEnv(env)
-    env = frame_resize_wrapper(env)
+    if not 'Micropolis' in env.spec.id:
+        env = frame_resize_wrapper(env)
     return env
 
 

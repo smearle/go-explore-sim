@@ -38,7 +38,10 @@ class StochasticGatherer:
         self.model = model
         self.runner = runner
         self.env = env
-        self.frame_skip = self.env.recursive_getattr('_skip')[0]
+        if hasattr(self.env, 'recursive_getattr'):
+            self.frame_skip = self.env.recursive_getattr('_skip')[0]
+        else:
+            self.frame_skip = None
 
         # Persistent data (needs to be restored)
         self.ep_info_window = deque(maxlen=log_window_size)

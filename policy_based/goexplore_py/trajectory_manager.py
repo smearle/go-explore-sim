@@ -154,6 +154,7 @@ class CellTrajectoryManager:
 
     def dump(self, filename):
         writer = tf.python_io.TFRecordWriter(filename)
+        print('dumping trajectories', self.cell_trajectories)
         for key in self.cell_trajectories:
             full_trajectory = self.get_full_trajectory(key)
             trajectory_id = tf.train.Feature(int64_list=tf.train.Int64List(value=[key]))
@@ -412,6 +413,7 @@ class CellTrajectoryManager:
     def set_full_trajectory(self, traj_id, traj_data=None):
         if traj_data is None:
             traj_data = []
+        print('setting traj', FullTrajectoryInfo())
         self.full_trajectory_info[traj_id] = FullTrajectoryInfo()
         self.full_trajectories[traj_id] = traj_data
 
@@ -420,6 +422,7 @@ class CellTrajectoryManager:
         if cell_trajectory_id == self.empty_trajectory_id:
             return result
         if cell_trajectory_id not in self.full_trajectory_info:
+            print('full traj', self.full_trajectory_info)
             raise KeyError(str(cell_trajectory_id) + ' not in trajectory manager')
         if self.full_trajectory_info[cell_trajectory_id].on_disk:
             self.read_full_trajectory_from_disk(cell_trajectory_id)

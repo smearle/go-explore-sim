@@ -34,6 +34,7 @@ import goexplore_py.goal_representations as goal_rep
 import goexplore_py.trajectory_gatherers as trajectory_gatherers
 import goexplore_py.montezuma_env as montezuma_env
 import goexplore_py.pitfall_env as pitfall_env
+import goexplore_py.simcity_env as simcity_env
 import goexplore_py.generic_atari_env as generic_atari_env
 import goexplore_py.generic_goal_conditioned_env as generic_goal_conditioned_env
 import goexplore_py.explorers as explorers
@@ -65,6 +66,7 @@ def get_game(game,
              cell_representation,
              end_on_death):
     game_lowered = game.lower()
+    param_bounds = None
     logger.info(f'Loading game: {game_lowered}')
     if game_lowered == 'montezuma' or game_lowered == 'montezumarevenge':
         game_name = 'MontezumaRevenge'
@@ -96,6 +98,16 @@ def get_game(game,
             GridDimension('level', 1), GridDimension('objects', 1), GridDimension('room', 1),
             GridDimension('x', x_res), GridDimension('y', y_res)
         )
+        cell_representation.set_grid_resolution(grid_resolution)
+    elif game_lowered == 'simcity':
+        game_name = 'MicropolisEnv'
+        game_class = simcity_env.MySimCity
+        game_args = dict(
+                cell_representation=cell_representation
+                )
+        grid_resolution = (
+                GridDimension('res_pop', 1), GridDimension('com_pop', 1), GridDimension('ind_pop', 1)
+                )
         cell_representation.set_grid_resolution(grid_resolution)
     elif 'generic' in game_lowered:
         game_name = game.split('_')[1]
@@ -275,6 +287,9 @@ def get_goal_rep(goal_representation_name: str,
         policy_name = 'gru_simple_goal'
     elif goal_representation_name == 'onehot':
         logger.debug(f'max values: {cell_representation.get_max_values()}')
+        print('rep_type', rep_type, 'rel_final_goal', rel_final_goal, 'rel_sub_goal', rel_sub_goal, 'max vals',
+                cell_representation.get_max_values())
+        print(cell_representation)
         goal_representation = goal_rep.OneHotGoalRep(rep_type, rel_final_goal, rel_sub_goal,
                                                      cell_representation.get_max_values())
         policy_name = 'gru_simple_goal'
@@ -363,18 +378,31 @@ def get_env(game_name,
             final_goal_reward
             ):
     logger.info(f'Creating environment for game: {game_name}')
-    temp_env = gym.make(game_name + 'NoFrameskip-v4')
-    set_action_meanings(temp_env.unwrapped.get_action_meanings())
+    if 'Micropolis' in game_name:
+        map_width = 36
+        temp_env = gym.make(game_name + 'NoFrameskip-v0')
+        temp_env.configure(map_width=map_width, tensorflow=True)
+    else:
+        temp_env = gym.make(game_name + 'NoFrameskip-v4')
+        set_action_meanings(temp_env.unwrapped.get_action_meanings())
+
 
     def make_env(rank):
         def env_fn():
+            print('making env, game args', game_args)
             logger.debug(f'Process seed set to: {rank} seed: {seed + rank}')
             set_global_seeds(seed + rank)
-            env_id = game_name + 'NoFrameskip-v4'
+            if 'Micropolis' in game_name:
+                env_id = game_name + 'NoFrameskip-v0'
+            else:
+                env_id = game_name + 'NoFrameskip-v4'
             if max_episode_steps is not None:
                 gym.spec(env_id).max_episode_steps = max_episode_steps
             local_env = gym.make(env_id)
-            set_action_meanings(local_env.unwrapped.get_action_meanings())
+            if 'Micropolis' in game_name:
+                local_env.configure(map_width=map_width, tensorflow=True, render_gui=False, print_map=True)
+            else:
+                set_action_meanings(local_env.unwrapped.get_action_meanings())
             local_env = game_class(local_env, **game_args)
             # Even if make video is true, only define it for one of our environments
             if make_video and rank % nb_envs == 0 and hvd.local_rank() == 0:
@@ -382,21 +410,24 @@ def get_env(game_name,
             else:
                 make_video_local = False
             video_file_prefix = save_path + '/vids/' + game_name
-            video_writer = wrappers.VideoWriter(
-                local_env,
-                video_file_prefix,
-                plot_goal=plot_goal,
-                x_res=x_res,
-                y_res=y_res,
-                plot_archive=plot_archive,
-                plot_return_prob=plot_return_prob,
-                one_vid_per_goal=one_vid_per_goal,
-                make_video=make_video_local,
-                directory=save_path + '/vids',
-                pixel_repetition=pixel_repetition,
-                plot_grid=plot_grid,
-                plot_sub_goal=plot_sub_goal)
-            local_env = video_writer
+            if 'Micropolis' in game_name:
+                video_writer = None
+            else:
+                video_writer = wrappers.VideoWriter(
+                    local_env,
+                    video_file_prefix,
+                    plot_goal=plot_goal,
+                    x_res=x_res,
+                    y_res=y_res,
+                    plot_archive=plot_archive,
+                    plot_return_prob=plot_return_prob,
+                    one_vid_per_goal=one_vid_per_goal,
+                    make_video=make_video_local,
+                    directory=save_path + '/vids',
+                    pixel_repetition=pixel_repetition,
+                    plot_grid=plot_grid,
+                    plot_sub_goal=plot_sub_goal)
+                local_env = video_writer
             local_env = wrappers.my_wrapper(
                 local_env,
                 clip_rewards=clip_rewards,
@@ -430,7 +461,8 @@ def get_env(game_name,
                 fail_ent_inc=fail_ent_inc,
                 final_goal_reward=final_goal_reward
             )
-            video_writer.goal_conditioned_wrapper = local_env
+            if not 'Micropolis' in game_name:
+                video_writer.goal_conditioned_wrapper = local_env
             if sil != 'none':
                 local_env = ge_wrappers.SilEnv(
                     env=local_env,
@@ -580,7 +612,8 @@ def setup(resolution,
           final_goal_reward,
           low_prob_traj_tresh,
           reset_on_update,
-          weight_based_skew):
+          weight_based_skew,
+          simcity=False):
     global master_pid
     logger.info('Starting setup')
     set_master_pid(os.getpid())
@@ -646,6 +679,9 @@ def setup(resolution,
         assert cell_representation.supported(game.lower()), cell_representation_name + ' does not support ' + game
     elif cell_representation_name == 'room_x_y':
         cell_representation = cell_representations.CellRepresentationFactory(cell_representations.RoomXY)
+        assert cell_representation.supported(game.lower()), cell_representation_name + ' does not support ' + game
+    elif cell_representation_name =='city_metrics':
+        cell_representation = cell_representations.CellRepresentationFactory(cell_representations.CityMetrics)
         assert cell_representation.supported(game.lower()), cell_representation_name + ' does not support ' + game
     else:
         raise NotImplementedError('Unknown cell representation: ' + cell_representation_name)
@@ -779,11 +815,18 @@ def setup(resolution,
 
     # Get goal explorer
     logger.info('Creating goal explorer')
-    goal_explorer = ge_wrappers.DomKnowNeighborGoalExplorer(x_res, y_res, random_exp_prob, random_explorer)
+    if 'Micropolis' in game_name:
+        param_bounds = simcity_env.MySimCity.param_bounds
+        goal_explorer = ge_wrappers.CityDomKnowNeighborGoalExplorer(res, param_bounds, random_exp_prob, random_explorer)
+    else:
+        goal_explorer = ge_wrappers.DomKnowNeighborGoalExplorer(x_res, y_res, random_exp_prob, random_explorer)
 
     # Get frame wrapper
     logger.info('Obtaining frame wrapper')
-    frame_resize_wrapper, new_height, new_width = get_frame_wrapper(frame_resize)
+    if 'simcity' in game:
+        frame_resize_wrapper, new_height, new_width = None, None, None
+    else:
+        frame_resize_wrapper, new_height, new_width = get_frame_wrapper(frame_resize)
 
     logger.info('Obtaining cell trajectory manager')
     cell_trajectory_manager = CellTrajectoryManager(sil,
@@ -1462,6 +1505,7 @@ def parse_arguments():
     parser.add_argument('--log_files', dest='log_files',
                         type=str, default=DefaultArg(''),
                         help='From which files we should log information. Example: atari_reset.atari_reset.policies')
+    parser.add_argument('--simcity', default=False)
 
     args = parser.parse_args()
 

@@ -299,6 +299,7 @@ def _run(**kwargs):
         tracemalloc.start(25)
 
     kwargs = del_out_of_setup_args(kwargs)
+    simcity = kwargs.get('simcity', False)
     expl, log_par = setup(**kwargs)
     local_logger.info('setup done')
 
@@ -358,31 +359,32 @@ def _run(**kwargs):
         # Code that should be executed by all workers at a checkpoint generation
         if checkpoint_tracker.should_write_checkpoint():
             local_logger.debug(f'Rank: {hvd.rank()} is exchanging screenshots for checkpoint: {expl.frames_compute}')
-            screenshots = expl.trajectory_gatherer.env.recursive_getattr('rooms')
-            if screenshot_merge == 'mpi':
-                screenshots = flatten_lists(mpi.COMM_WORLD.allgather(screenshots))
-            merged_dict = {}
-            for screenshot_dict in screenshots:
-                for key, value in screenshot_dict.items():
-                    if key not in merged_dict:
-                        merged_dict[key] = value
-                    else:
-                        after_threshold_screenshot_taken_merged = merged_dict[key][0]
-                        after_threshold_screenshot_taken_current = screenshot_dict[key][0]
-                        if after_threshold_screenshot_taken_current and not after_threshold_screenshot_taken_merged:
+            if not simcity:
+                screenshots = expl.trajectory_gatherer.env.recursive_getattr('rooms')
+                if screenshot_merge == 'mpi':
+                    screenshots = flatten_lists(mpi.COMM_WORLD.allgather(screenshots))
+                merged_dict = {}
+                for screenshot_dict in screenshots:
+                    for key, value in screenshot_dict.items():
+                        if key not in merged_dict:
                             merged_dict[key] = value
+                        else:
+                            after_threshold_screenshot_taken_merged = merged_dict[key][0]
+                            after_threshold_screenshot_taken_current = screenshot_dict[key][0]
+                            if after_threshold_screenshot_taken_current and not after_threshold_screenshot_taken_merged:
+                                merged_dict[key] = value
 
-            if screenshot_merge == 'disk':
-                for key, value in merged_dict.items():
-                    filename = f'{screen_shot_dir}/{key}_{hvd.rank()}.png'
-                    os.makedirs(screen_shot_dir, exist_ok=True)
-                    if not os.path.isfile(filename):
-                        im = Image.fromarray(value[1])
-                        im.save(filename)
-                        im_array = imageio.imread(filename)
-                        assert (im_array == value[1]).all()
+                if screenshot_merge == 'disk':
+                    for key, value in merged_dict.items():
+                        filename = f'{screen_shot_dir}/{key}_{hvd.rank()}.png'
+                        os.makedirs(screen_shot_dir, exist_ok=True)
+                        if not os.path.isfile(filename):
+                            im = Image.fromarray(value[1])
+                            im.save(filename)
+                            im_array = imageio.imread(filename)
+                            assert (im_array == value[1]).all()
 
-                mpi.COMM_WORLD.barrier()
+                    mpi.COMM_WORLD.barrier()
 
             local_logger.debug('Merging SIL trajectories')
             sil_trajectories = [expl.prev_selected_traj]
@@ -477,7 +479,7 @@ def _run(**kwargs):
                 filename = f'{log_par.base_path}/{expl.frames_compute:0{log_par.n_digits}}'
 
                 # Save pictures
-                if len(log_par.save_pictures) > 0:
+                if not simcity and len(log_par.save_pictures) > 0:
                     if screenshot_merge == 'disk':
                         for file_name in os.listdir(screen_shot_dir):
                             if file_name.endswith('.png'):

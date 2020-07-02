@@ -163,6 +163,25 @@ def get_neighbor(env, pos, offset, x_range, y_range):
     new_pos.y = y
     return new_pos
 
+def get_city_neighbor(env, pos, param_bounds, offset):
+   #print('offset is', offset)
+    res_pop = pos.res_pop + offset[0]
+    com_pop = pos.com_pop + offset[1]
+    ind_pop = pos.ind_pop + offset[2]
+
+    def clamp(n, smallest, largest): 
+        return max(smallest, min(n, largest))
+
+    res_pop = clamp(res_pop, *param_bounds['res_pop'])
+    com_pop = clamp(com_pop, *param_bounds['com_pop'])
+    ind_pop = clamp(ind_pop, *param_bounds['ind_pop'])
+    new_pos = copy.copy(pos)
+    new_pos.res_pop = res_pop
+    new_pos.com_pop = com_pop
+    new_pos.ind_pop = ind_pop
+   #print('offset', offset, 'new pos', new_pos)
+    return new_pos
+
 
 class GoalExplorer:
     def __init__(self, random_exp_prob, random_explorer):
@@ -188,6 +207,46 @@ class GoalExplorer:
 
     def choose(self, go_explore_env):
         raise NotImplementedError('GoalExplorers need to implement a choose method.')
+
+
+class CityDomKnowNeighborGoalExplorer(GoalExplorer):
+    def __init__(self, res, param_bounds, random_exp_prob, random_explorer):
+        super(CityDomKnowNeighborGoalExplorer, self).__init__(random_exp_prob, random_explorer)
+        self.res = res
+        num_params = len(param_bounds)
+        offsets = []
+        for i in range(num_params):
+            offset = np.zeros(num_params)
+            offset[i] = 1
+            offsets.append(offset)
+            offset = copy.copy(offset)
+            offset[i] = -1
+            offsets.append(offset)
+        self.offsets = offsets
+        self.param_bounds = param_bounds
+
+
+    def choose(self, go_explore_env):
+
+        possible_neighbors = []
+        unknown_neighbors = []
+        for offset in self.offsets:
+            possible_neighbor = get_city_neighbor(go_explore_env.env, go_explore_env.last_reached_cell, self.param_bounds, offset)
+            if possible_neighbor is not None:
+                if (possible_neighbor not in go_explore_env.archive.archive and
+                        possible_neighbor not in go_explore_env.locally_explored):
+                    unknown_neighbors.append(possible_neighbor)
+                possible_neighbors.append(possible_neighbor)
+       #print('unknown neighbs', unknown_neighbors)
+       #print('possible neighbs', possible_neighbors)
+        if len(unknown_neighbors) > 0 and random.random() > 0.9:
+            target_cell = random.choice(unknown_neighbors)
+        elif len(possible_neighbors) > 0 and random.random() > 0.75:
+            target_cell = random.choice(possible_neighbors)
+        else:
+            target_cell = go_explore_env.select_cell_from_archive()
+            go_explore_env.last_reached_cell = target_cell
+        return target_cell
 
 
 class DomKnowNeighborGoalExplorer(GoalExplorer):
@@ -563,6 +622,7 @@ class GoalConGoExploreEnv(MyWrapper):
     def select_cell_from_archive(self):
         archive = self.archive.archive
         chosen_cell_key = self.archive.cell_selector.choose_cell_key(archive)[0]
+        print('selecting cell from archive:', chosen_cell_key)
         return chosen_cell_key
 
     def _return_success(self):
@@ -583,7 +643,12 @@ class GoalConGoExploreEnv(MyWrapper):
     def _get_nn_goal_rep(self):
         # Return return information
         if self.goal_cell_rep is None and self.sub_goal_cell_rep is None:
+            print('crap goal rep is None')
             return None
+       #print('current, goal, sub goal cells: ', self.current_cell, self.goal_cell_rep, self.sub_goal_cell_rep)
+        if self.current_cell is None:
+            self.current_cell = np.array([0,0,0])
+            self.sub_goal_cell_rep = np.array([0,0,0])
         goal = self.goal_representation.get(self.current_cell, self.goal_cell_rep, self.sub_goal_cell_rep)
         return goal
 
@@ -728,6 +793,7 @@ class GoalConGoExploreEnv(MyWrapper):
 
         # Return return information
         goal = self._get_nn_goal_rep()
+        print('got nn goal rep:', goal)
         obs_and_goal = (obs, goal)
         if self.video_writer:
             self.video_writer.start_video()
@@ -1068,7 +1134,8 @@ class SilEnv(MyWrapper):
         elif nb_channels == 3:
             self.image_format = cv2.IMREAD_COLOR
         else:
-            raise Exception('Unsupported number of channels:' + str(nb_channels))
+            self.simcity = True
+           #raise Exception('Unsupported number of channels:' + str(nb_channels))
         self.sil_on = False
         self.sil_initial_action = None
         self.sil_initial_observation = None
@@ -1108,9 +1175,10 @@ class SilEnv(MyWrapper):
 
     def decompress(self, obs_and_goal):
         obs, goal = obs_and_goal
-        obs = cv2.imdecode(obs, self.image_format)
-        if self.image_format == cv2.IMREAD_GRAYSCALE:
-            obs = np.expand_dims(obs, axis=-1)
+        if not self.simcity:
+            obs = cv2.imdecode(obs, self.image_format)
+            if self.image_format == cv2.IMREAD_GRAYSCALE:
+                obs = np.expand_dims(obs, axis=-1)
         return obs, goal
 
     def get_value(self, rewards):

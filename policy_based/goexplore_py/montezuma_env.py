@@ -152,6 +152,7 @@ class MyMontezuma(MyWrapper):
         self.pos = None
         self.pos_from_unprocessed_state(self.get_face_pixels(unprocessed_state), unprocessed_state, False)
         self.pos = self.cell_representation(self)
+        print('self pos', self.cell_representation(self))
         if self.room not in self.rooms and self.level >= 0:
             self.rooms[self.room] = (False, unprocessed_state[50:].repeat(self.x_repeat, axis=1))
         self.room_time = (self.room, 0)

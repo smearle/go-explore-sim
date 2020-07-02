@@ -126,7 +126,9 @@ class OneHotGoalRep(FlatGoalRep):
         super().__init__(rep_type, rel_final_goal, rel_sub_goal, rep_lengths)
 
     def get_goal_space(self):
-        return spaces.Box(low=0, high=1, shape=(self.total_length,), dtype=np.float32)
+        goal_space = spaces.Box(low=0, high=1, shape=(self.total_length,), dtype=np.float32)
+        print('goal space is', goal_space)
+        return goal_space
 
     def _get_goal_rep(self, goal: Any, current_loc: Any, relative: bool):
         cur_index = 0

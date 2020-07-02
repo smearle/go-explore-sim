@@ -401,6 +401,7 @@ class StochasticArchive:
         @return: None
         """
         cell = self.get_new_cell_info()
+        print('cell key iss', cell_key, type(cell_key))
         if cell_key not in self.cell_key_to_id_dict:
             cell_id = self.get_new_cell_id()
             self.cell_id_to_key_dict[cell_id] = cell_key

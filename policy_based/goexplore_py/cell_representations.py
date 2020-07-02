@@ -10,6 +10,7 @@ import numpy as np
 from typing import List, Any, Type
 from goexplore_py.montezuma_env import MyMontezuma
 from goexplore_py.pitfall_env import MyPitfall
+from goexplore_py.simcity_env import MySimCity
 
 
 class CellRepresentationBase:
@@ -60,11 +61,14 @@ class CellRepresentationFactory:
         self.grid_resolution = grid_resolution
         self.grid_res_dict = {}
         self.max_values = []
+        print('setting grid res')
 
         for dimension in self.grid_resolution:
             self.grid_res_dict[dimension.attr] = dimension.div
 
         for attr_name in self.cell_rep_class.get_attributes():
+            if attr_name in ['done', 'tuple']:
+                return
             max_val = self.cell_rep_class.get_attr_max(attr_name)
             if attr_name in self.grid_res_dict:
                 max_val, remainder = divmod(max_val, self.grid_res_dict[attr_name])
@@ -73,10 +77,112 @@ class CellRepresentationFactory:
             self.max_values.append(max_val)
 
     def get_max_values(self):
+        print('get self max vals', self.max_values)
         return self.max_values
 
     def supported(self, game_name):
         return game_name in self.cell_rep_class.supported_games
+
+
+class CityMetrics(CellRepresentationBase):
+    __slots__ = ['_res_pop', '_com_pop', '_ind_pop', '_done', 'tuple']
+    attributes = ('res_pop', 'com_pop', 'ind_pop', 'done')
+    array_length = 4
+    supported_games = ('simcity')
+
+    @staticmethod
+    def get_attr_max(name):
+        if name == 'done':
+            return 2
+        return MySimCity.get_attr_max(name)
+
+    @staticmethod
+    def get_array_length():
+        return CityMetrics.array_length
+
+    @staticmethod
+    def get_attributes():
+        print('getting citymetric attributes', CityMetrics.attributes)
+        return CityMetrics.attributes
+
+    def __init__(self, simcity_env=None):
+        self._res_pop = None
+        self._com_pop = None
+        self._ind_pop = None
+        self._done = None
+        self.tuple = None
+
+        if simcity_env is not None:
+            self._res_pop = simcity_env.res_pop
+            self._com_pop = simcity_env.com_pop
+            self._ind_pop = simcity_env.ind_pop
+            self._done = simcity_env.done
+            self.set_tuple()
+
+    @staticmethod
+    def make(env=None):
+        return CityMetrics(env) 
+
+    def set_tuple(self):
+        self.tuple = (self.res_pop, self.com_pop, self.ind_pop, self._done)
+
+    @property
+    def res_pop(self):
+        return self._res_pop
+
+    @res_pop.setter
+    def res_pop(self, value):
+        self._res_pop = value
+        self.set_tuple()
+
+    @property
+    def com_pop(self):
+        return self._com_pop
+
+    @com_pop.setter
+    def com_pop(self, value):
+        self._com_pop = value
+        self.set_tuple()
+
+    @property
+    def ind_pop(self):
+        return self._ind_pop
+
+    @ind_pop.setter
+    def ind_pop(self, value):
+        self._ind_pop = value
+        self.set_tuple()
+
+    @property
+    def done(self):
+        return self._done
+
+    @done.setter
+    def done(self, value):
+        self._done = value
+        self.set_tuple()
+
+    def as_array(self):
+        return np.array(self.tuple)
+
+    def __hash__(self):
+        return hash(self.tuple)
+
+    def __eq__(self, other):
+        if not isinstance(other, CityMetrics):
+            return False
+        return self.tuple == other.tuple
+
+    def __getstate__(self):
+        return self.tuple
+
+    def __setstate__(self, d):
+        self._res_pop, self._com_pop, self._ind_pop, self._done = d
+        self.tuple = d
+
+    def __repr__(self):
+        return f'res_pop={self._res_pop} com_pop={self._com_pop} ind_pop={self._ind_pop} done={self._done}'
+
 
 
 class RoomXY(CellRepresentationBase):

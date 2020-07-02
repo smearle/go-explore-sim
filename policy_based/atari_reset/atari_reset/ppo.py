@@ -254,8 +254,17 @@ class Runner(object):
         self.ar_mb_traj_index = None
         self.ar_mb_traj_len = None
 
-        self.ar_mb_obs_2 = np.zeros(shape=[self.nenv, self.nsteps + self.num_steps_to_cut_left, 80, 105, 12],
-                                    dtype=self.model.train_model.X.dtype.name)
+        if True:
+       #try:
+      #     if 'Micropolis' in self.env.recursive_getattr('env_name'):
+
+            self.ar_mb_obs_2 = np.zeros(shape=[self.nenv, self.nsteps + self.num_steps_to_cut_left,
+                                                   *env.observation_space.shape],
+                                            dtype=self.model.train_model.X.dtype.name)
+        else:
+
+            self.ar_mb_obs_2 = np.zeros(shape=[self.nenv, self.nsteps + self.num_steps_to_cut_left, 80, 105, 12],
+                                        dtype=self.model.train_model.X.dtype.name)
         self.obs_final = None
         self.first_rollout = True
 
@@ -269,6 +278,7 @@ class Runner(object):
         logger.info('Casting the observation...')
         self.obs_final = np.cast[self.model.train_model.X.dtype.name](obs)
         logger.info(f'Assigning the observation to a slice of our observation array: {self.obs_final.shape}')
+        print('goals are', goals)
         self.ar_mb_obs_2[:, 0, ...] = self.obs_final
 
         logger.info('Casting the goal...')
@@ -368,6 +378,7 @@ class Runner(object):
         return np.asarray([info.get('increase_entropy', 1.0) for info in infos], dtype=np.float32)
 
     def step_model(self, obs, mb_goals, mb_states, mb_dones, mb_increase_ent):
+       #print('shape of obs, goals, etc on step', obs.shape, mb_goals[-1].shape, mb_states[-1].shape)
         return self.model.step(obs, mb_goals[-1], mb_states[-1], mb_dones[-1], mb_increase_ent[-1])
 
     def append_mb_data(self, actions, values, states, neglogpacs, obs_and_goals, rewards, dones, infos):
@@ -455,7 +466,11 @@ class Runner(object):
         for env_i in range(self.ar_mb_obs_2.shape[0]):
             for it_i in range(start, self.ar_mb_obs_2.shape[1]):
                 frame = self.ar_mb_obs_2[env_i, it_i, :, :, last_frame_start:]
-                single_frames.append(cv2.imencode('.png', frame, [cv2.IMWRITE_PNG_COMPRESSION, 7])[1])
+                n_chan = frame.shape[-1]
+                if n_chan in [1, 3, 4]:
+                    single_frames.append(cv2.imencode('.png', frame, [cv2.IMWRITE_PNG_COMPRESSION, 7])[1])
+                else:
+                    single_frames.append(frame)
 
         self.trunc_mb_obs = single_frames
         self.trunc_mb_goals = sf01(np.asarray(self.mb_goals[end-len(self.mb_cells):end],
