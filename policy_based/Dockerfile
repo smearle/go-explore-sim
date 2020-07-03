@@ -8,5 +8,3 @@ RUN apt-get update -q \
     && rm -rf /var/lib/apt/lists/*
 RUN cat /root/requirements.txt | xargs -n 1 -L 1 pip install
 ADD . /root/
-USER sme
-CMD sh /root/run_policy_based_ge_montezuma.sh

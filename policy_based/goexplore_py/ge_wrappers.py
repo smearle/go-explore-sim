@@ -1134,6 +1134,7 @@ class SilEnv(MyWrapper):
             self.image_format = cv2.IMREAD_GRAYSCALE
         elif nb_channels == 3:
             self.image_format = cv2.IMREAD_COLOR
+            self.simcity = False
         else:
             self.simcity = True
            #raise Exception('Unsupported number of channels:' + str(nb_channels))
