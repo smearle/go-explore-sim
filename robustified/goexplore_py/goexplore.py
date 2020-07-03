@@ -9,10 +9,10 @@
 # limitations under the License.
 
 
-from .explorers import *
-from .montezuma_env import *
-from .generic_atari_env import *
-from .utils import *
+from explorers import *
+from montezuma_env import *
+from generic_atari_env import *
+from utils import *
 import loky
 import gzip
 import bz2

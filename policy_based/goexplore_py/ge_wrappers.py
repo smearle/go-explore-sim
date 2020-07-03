@@ -757,6 +757,7 @@ class GoalConGoExploreEnv(MyWrapper):
         return obs_and_goal, self.total_reward, done, self.info
 
     def reset(self):
+        print('RESETTING EXPLORER')
         # Clear cache
         self.archive.clear_cache()
 
@@ -1155,6 +1156,7 @@ class SilEnv(MyWrapper):
         self.sil_invalid = sil_invalid
 
     def step(self, *args, **kwargs):
+        print('SILENV STEP')
         if not self.sil_on:
             obs_and_goal, reward, done, info = self.env.step(*args, **kwargs)
             return obs_and_goal, reward, done, info

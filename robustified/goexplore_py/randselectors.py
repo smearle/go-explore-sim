@@ -9,11 +9,11 @@
 # limitations under the License.
 
 
-from .import_ai import *
+from import_ai import *
 
 # from montezuma_env import *
-from goexplore_py.complex_fetch_env import *
-from goexplore_py.goexplore import DONE
+from complex_fetch_env import *
+from goexplore import DONE
 
 
 @dataclass()

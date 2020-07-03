@@ -24,7 +24,7 @@ if not is_notebook():
     import matplotlib
     matplotlib.use('Agg')
     
-from .basics import *
+from basics import *
 
 import warnings as _warnings
 # Known to be benign: https://github.com/ContinuumIO/anaconda-issues/issues/6678#issuecomment-337279157

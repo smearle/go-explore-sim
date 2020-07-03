@@ -9,8 +9,8 @@
 # limitations under the License.
 
 
-from .import_ai import *
-from .utils import imdownscale
+from import_ai import *
+from utils import imdownscale
 
 
 class PitfallPosLevel:

@@ -9,7 +9,7 @@
 # limitations under the License.
 
 
-from .import_ai import *
+from import_ai import *
 import types
 
 

@@ -9,10 +9,10 @@
 # limitations under the License.
 
 
-from .basics import *
-from .import_ai import *
-from . import montezuma_env
-from .utils import imdownscale
+from basics import *
+from import_ai import *
+import montezuma_env
+from utils import imdownscale
 
 def convert_state(state):
     if MyAtari.TARGET_SHAPE is None:

@@ -9,7 +9,7 @@
 # limitations under the License.
 
 
-from .import_ai import *
+from import_ai import *
 
 import types
 os.environ["PATH"] = os.environ["PATH"].replace('/usr/local/nvidia/bin', '')

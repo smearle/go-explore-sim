@@ -11,14 +11,14 @@
 
 import sys
 from sys import platform
-from goexplore_py.randselectors import *
-from goexplore_py.goexplore import *
-import goexplore_py.goexplore
-import goexplore_py.montezuma_env as montezuma_env
-import goexplore_py.pitfall_env as pitfall_env
-import goexplore_py.generic_atari_env as generic_atari_env
-import goexplore_py.generic_goal_conditioned_env as generic_goal_conditioned_env
-import goexplore_py.complex_fetch_env as complex_fetch_env
+from randselectors import *
+from goexplore import *
+import goexplore
+import montezuma_env as montezuma_env
+import pitfall_env as pitfall_env
+import generic_atari_env as generic_atari_env
+import generic_goal_conditioned_env as generic_goal_conditioned_env
+import complex_fetch_env as complex_fetch_env
 import cProfile
 import gzip
 
@@ -61,8 +61,8 @@ def _run(
         args
         ):
 
-    goexplore_py.goexplore.perf_array = multiprocessing.Array('d', [0.0] * MemInfo.ARRAY_SIZE)
-    perf_process = multiprocessing.Process(target=track_performance, args=(goexplore_py.goexplore.perf_array, 1, 0.1))
+    goexplore.perf_array = multiprocessing.Array('d', [0.0] * MemInfo.ARRAY_SIZE)
+    perf_process = multiprocessing.Process(target=track_performance, args=(goexplore.perf_array, 1, 0.1))
     perf_process.start()
 
     if 'robot' in args.game:

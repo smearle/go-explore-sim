@@ -9,7 +9,7 @@
 # limitations under the License.
 
 
-from .import_ai import *
+from import_ai import *
 
 class TimedPickle:
     def __init__(self, data, name, enabled=True):

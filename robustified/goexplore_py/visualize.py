@@ -17,7 +17,7 @@ import matplotlib.colors
 import pickle
 from collections import defaultdict
 
-from goexplore_py.montezuma_env import PYRAMID
+from montezuma_env import PYRAMID
 
 
 def render_with_known(data, filename):
