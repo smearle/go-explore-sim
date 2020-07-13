@@ -605,7 +605,7 @@ def run(kwargs):
         raise Exception('Experiment: ' + base_path + ' already exists!')
 
     # We need to setup the MPI environment before performing any data processing
-    nb_cpu = 2
+    nb_cpu = 1
     session, master_seed = hrv_and_tf_init(nb_cpu, kwargs['nb_envs'],  kwargs['seed'])
     with session.as_default():
         worker_seed_start = master_seed + 1

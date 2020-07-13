@@ -400,7 +400,7 @@ def get_env(game_name,
                 gym.spec(env_id).max_episode_steps = max_episode_steps
             local_env = gym.make(env_id)
             if 'Micropolis' in game_name:
-                local_env.configure(map_width=map_width, tensorflow=True, render_gui=False, print_map=True)
+                local_env.configure(map_width=map_width, tensorflow=True, render_gui=True, print_map=False)
             else:
                 set_action_meanings(local_env.unwrapped.get_action_meanings())
             local_env = game_class(local_env, **game_args)
